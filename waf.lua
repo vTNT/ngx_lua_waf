@@ -1,5 +1,6 @@
 local content_length=tonumber(ngx.req.get_headers()['content-length'])
 local method=ngx.req.get_method()
+local ngxmatch=ngx.re.match
 if whiteip() then
 elseif blockip() then
 elseif denycc() then
@@ -41,6 +42,20 @@ elseif PostCheck then
 	   	        return true
     	    	end
 		size = size + len(data)
+		local m = ngxmatch(data,[[Content-Disposition: form-data;(.+)filename="(.+)\\.(.*)"]],'ijo')
+        	if m then
+            		fileExtCheck(m[3])
+            		filetranslate = true
+        	else
+            		if ngxmatch(data,"Content-Disposition:",'isjo') then
+                		filetranslate = false
+            		end
+            		if filetranslate==false then
+            			if body(data) then
+                    			return true
+                		end
+            		end
+        	end
 		local less = content_length - size
 		if less < chunk_size then
 			chunk_size = less
@@ -60,7 +75,7 @@ elseif PostCheck then
 					data=val
 				end
 				if data and type(data) ~= "boolean" and body(data) then
-                  return true
+                			return true
 				end
 			end
 		end
